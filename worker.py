@@ -50,6 +50,10 @@ def should_send_daily_email() -> bool:
     now = datetime.utcnow()
     today = now.date()
 
+    # Check if email is paused
+    if os.getenv('PAUSE_EMAIL', 'false').lower() == 'true':
+        return False
+
     # Check if we have SendGrid configured
     if not os.getenv('SENDGRID_API_KEY'):
         return False
