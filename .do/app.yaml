@@ -4,6 +4,7 @@ region: nyc
 workers:
   - name: sync-worker
     dockerfile_path: Dockerfile
+    source_dir: /
     instance_count: 1
     instance_size_slug: apps-s-1vcpu-0.5gb
     envs:
