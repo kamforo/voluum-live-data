@@ -28,7 +28,7 @@ class VoluumLiveCollector:
         supabase_key: Optional[str] = None,
         voluum_access_id: Optional[str] = None,
         voluum_access_key: Optional[str] = None,
-        campaign_filter: str = "Voluum MB"
+        campaign_filter: str = None  # Sync all campaigns
     ):
         # Supabase
         self.supabase_url = supabase_url or os.getenv("SUPABASE_URL")
@@ -89,14 +89,17 @@ class VoluumLiveCollector:
         campaigns = []
         for row in data.get("rows", []):
             name = row.get("campaignName", "")
-            if self.campaign_filter in name and row.get("visits", 0) > 0:
-                campaigns.append({
-                    "campaign_id": row.get("campaignId"),
-                    "campaign_name": name,
-                    "visits": row.get("visits", 0)
-                })
+            # If no filter, include all campaigns with traffic
+            if row.get("visits", 0) > 0:
+                if self.campaign_filter is None or self.campaign_filter in name:
+                    campaigns.append({
+                        "campaign_id": row.get("campaignId"),
+                        "campaign_name": name,
+                        "visits": row.get("visits", 0)
+                    })
 
-        logger.info(f"Found {len(campaigns)} {self.campaign_filter} campaigns with traffic")
+        filter_desc = self.campaign_filter if self.campaign_filter else "all"
+        logger.info(f"Found {len(campaigns)} {filter_desc} campaigns with traffic")
         return campaigns
 
     def _parse_timestamp(self, ts_str: str) -> Optional[str]:
