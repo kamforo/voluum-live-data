@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
 Voluum Sync Worker for DigitalOcean App Platform
-Runs continuous sync at specified interval
+Runs continuous sync at specified interval + daily email reports
 """
 
 import asyncio
 import os
 import sys
 import signal
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
 from dotenv import load_dotenv
@@ -18,6 +18,7 @@ from data_collector_v2 import VoluumLiveCollector
 
 # Configuration
 SYNC_INTERVAL_SECONDS = int(os.getenv("SYNC_INTERVAL_SECONDS", "120"))  # 2 minutes default
+DAILY_REPORT_HOUR = int(os.getenv("DAILY_REPORT_HOUR", "8"))  # 8 AM UTC default
 
 # Set up logging
 logging.basicConfig(
@@ -38,6 +39,52 @@ def signal_handler(sig, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
+
+# Track last email sent date
+last_email_date = None
+
+
+def should_send_daily_email() -> bool:
+    """Check if daily email should be sent now"""
+    global last_email_date
+    now = datetime.utcnow()
+    today = now.date()
+
+    # Check if we have SendGrid configured
+    if not os.getenv('SENDGRID_API_KEY'):
+        return False
+
+    # Check if we already sent today
+    if last_email_date == today:
+        return False
+
+    # Check if it's the right hour
+    if now.hour == DAILY_REPORT_HOUR:
+        return True
+
+    return False
+
+
+def send_daily_email():
+    """Send the daily pattern report email"""
+    global last_email_date
+
+    try:
+        from email_report import load_conversions, generate_html_report, send_email
+
+        logger.info("Generating daily email report...")
+        df = load_conversions(days_back=30)
+        html = generate_html_report(df)
+
+        status = send_email(html)
+        if status == 202:
+            logger.info(f"Daily email sent successfully to {os.getenv('REPORT_EMAIL_TO')}")
+            last_email_date = datetime.utcnow().date()
+        else:
+            logger.warning(f"Email sent with status: {status}")
+
+    except Exception as e:
+        logger.error(f"Failed to send daily email: {e}", exc_info=True)
 
 
 async def run_sync_cycle():
@@ -66,9 +113,14 @@ async def run_sync_cycle():
 async def main():
     """Main worker loop"""
     logger.info(f"Voluum Sync Worker starting (interval: {SYNC_INTERVAL_SECONDS}s)")
+    logger.info(f"Daily email configured for {DAILY_REPORT_HOUR}:00 UTC")
 
     while not shutdown_event.is_set():
         await run_sync_cycle()
+
+        # Check if daily email should be sent
+        if should_send_daily_email():
+            send_daily_email()
 
         # Wait for interval or shutdown signal
         try:

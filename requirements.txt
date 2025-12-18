@@ -1,3 +1,5 @@
 httpx>=0.25.0
 python-dotenv>=1.0.0
 supabase>=2.0.0
+pandas>=2.0.0
+sendgrid>=6.10.0
