@@ -1,0 +1,24 @@
+name: voluum-sync
+region: nyc
+
+workers:
+  - name: sync-worker
+    dockerfile_path: Dockerfile
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    envs:
+      - key: VOLUUM_ACCESS_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: VOLUUM_ACCESS_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: SUPABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+      - key: SUPABASE_SERVICE_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: SYNC_INTERVAL_SECONDS
+        scope: RUN_TIME
+        value: "120"
