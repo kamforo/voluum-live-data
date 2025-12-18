@@ -347,7 +347,7 @@ class VoluumLiveCollector:
                 seen = set()
                 for row in rows:
                     name = row.get("campaignName", "")
-                    if self.campaign_filter not in name:
+                    if self.campaign_filter is not None and self.campaign_filter not in name:
                         continue
 
                     click_id = row.get("clickId")
